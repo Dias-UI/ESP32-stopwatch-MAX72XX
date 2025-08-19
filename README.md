@@ -44,16 +44,18 @@ This project is built using [PlatformIO](https://platformio.org/) with the Ardui
 
 ## Setup & Installation
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <your-repo-url>
-    ```
+1. **Create a new PlatformIO project**  
+   Open VS Code with the PlatformIO extension installed and create a new project for ESP32.
 
-2.  **Open in PlatformIO:**
-    Open the project folder in VS Code with the PlatformIO extension installed.
+2. **Add project files**  
+   Replace the default files with the provided ones:
+   - Paste the contents into `main.cpp`
+   - Paste the contents into `platformio.ini`
 
-3.  **Build and Upload:**
-    PlatformIO will automatically fetch the required dependencies. Build the project and upload it to your ESP32 board.
+3. **Build and Upload**  
+   Save the files (this will trigger dependency installation), then:
+   ```bash
+   pio run -t upload
 
 ## How It Works
 
