@@ -1,8 +1,6 @@
 # ESP32 MAX72XX Stopwatch
 
-This project is a digital stopwatch implemented on an ESP32 microcontroller that displays the elapsed time on a series of four 8x8 LED matrix displays, driven by the MAX72XX driver.
-
-The stopwatch displays time in `SS.cs` format (Seconds.centiseconds) up to `99.99`. A single button controls the start, stop (pause), and reset functions.
+This project is a digital stopwatch implemented on an ESP32 microcontroller that displays the elapsed time on a series of four 8x8 LED matrix displays.
 
 ## Features
 
