@@ -12,7 +12,7 @@ The stopwatch displays time in `SS.cs` format (Seconds.centiseconds) up to `99.9
     - **1st Press:** Start
     - **2nd Press:** Pause
     - **3rd Press:** Reset
-- **Leading Zero Blanking:** The tens-of-seconds digit is blank until the time reaches 10.00 seconds.
+- **Custom Digits:** The number patterns are defined by the 8x8 patterns and can be customized and edited.
 
 ## Hardware Requirements
 
@@ -20,6 +20,12 @@ The stopwatch displays time in `SS.cs` format (Seconds.centiseconds) up to `99.9
 - **Display:** 4 x MAX7219 8x8 Dot Matrix LED Display Modules (daisy-chained)
 - **Button:** 1 x Push Button
 - **Wiring:** Jumper wires
+
+Instead of a traditional push button, you can create a simple pressure-sensitive switch using:
+- Two conductive pads (e.g., aluminum tape)
+- A non-conductive spacer (e.g., layers of acrylic tape) between them
+- Wiring each pad to the ESP32 (one to GND, the other to the button pin)
+When pressed, the pads touch, completing the circuit just like a button press. This works well for foot-activated controls or large touch surfaces.
 
 ### Pin Configuration
 
