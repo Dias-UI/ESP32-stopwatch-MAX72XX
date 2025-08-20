@@ -28,7 +28,7 @@ LEDState currentLEDState = LED_OFF;
 
 // Communication message types
 typedef struct {
-  int messageType; // 1 = start signal, 2 = reset signal
+  int messageType; // 1 = start signal, 2 = reset signal, 3 = ping, 4 = pong
   unsigned long timestamp;
 } Message;
 
@@ -111,6 +111,28 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   }
 }
 
+// Callback function for receiving ESP-NOW data
+void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+  Message msg;
+  memcpy(&msg, incomingData, sizeof(msg));
+  
+  Serial.print("Message received from: ");
+  for (int i = 0; i < 6; i++) {
+    Serial.printf("%02X", mac[i]);
+    if (i < 5) Serial.print(":");
+  }
+  Serial.println();
+  
+  if (msg.messageType == 3) { // Ping received
+    Serial.println("Ping received - Sending pong");
+    // Send pong response
+    Message pongMsg;
+    pongMsg.messageType = 4;
+    pongMsg.timestamp = millis();
+    esp_now_send(topDeviceMAC, (uint8_t *) &pongMsg, sizeof(pongMsg));
+  }
+}
+
 // Function to send start signal to top device
 void sendStartSignal() {
   Message msg;
@@ -160,6 +182,10 @@ void initESPNow() {
   // Register send callback
   esp_now_register_send_cb(OnDataSent);
   Serial.println("Send callback registered");
+  
+  // Register receive callback
+  esp_now_register_recv_cb(OnDataRecv);
+  Serial.println("Receive callback registered");
   
   // Add peer (top device)
   esp_now_peer_info_t peerInfo = {};
