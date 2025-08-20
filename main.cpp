@@ -15,14 +15,14 @@ MD_MAX72XX mx = MD_MAX72XX(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES
 unsigned long startTime = 0;
 unsigned long pausedTime = 0;
 unsigned long totalPausedTime = 0;
-enum StopwatchState { STOPPED, RUNNING, PAUSED };
+enum StopwatchState { STOPPED, RUNNING, PAUSED, PAUSED_IDLE, RESET_IDLE };
 StopwatchState stopwatchState = STOPPED;
 
 // Button variables
-bool lastButtonState = HIGH;
-bool currentButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 50;
+unsigned long debounceDelay = 5; // 5ms debounce delay for better responsiveness
+byte buttonState = HIGH;
+byte lastButtonState = HIGH;
 
 // Define 8x8 patterns for digits 0-9
 // Each byte represents a row, MSB is leftmost pixel
@@ -244,28 +244,27 @@ void updateStopwatchDisplay() {
   displayDigit(3, centisecondsOnes);               // Hundredths of seconds
 }
 
-// Function to handle button press with debouncing
-bool buttonPressed() {
-  bool reading = digitalRead(BUTTON_PIN);
-  
+// Function to handle button events
+byte checkButton() {
+  byte reading = digitalRead(BUTTON_PIN);
+
   if (reading != lastButtonState) {
     lastDebounceTime = millis();
   }
-  
+
   if ((millis() - lastDebounceTime) > debounceDelay) {
-    if (reading != currentButtonState) {
-      currentButtonState = reading;
-      
-      // Button was released (went from LOW to HIGH)
-      if (currentButtonState == HIGH) {
-        lastButtonState = reading;
-        return true;
+    if (reading != buttonState) {
+      buttonState = reading;
+      if (buttonState == LOW) {
+        return 1; // Pressed
+      } else {
+        return 2; // Released
       }
     }
   }
-  
+
   lastButtonState = reading;
-  return false;
+  return 0; // No event
 }
 
 void setup() {
@@ -303,41 +302,54 @@ void setup() {
   
   delay(1000);
   
-  // Display initial 00.00
-  displayZeros();
+  // Keep display clear initially
+  clearDisplay();
   
   Serial.println("Stopwatch ready! Press button on GPIO32 to start.");
 }
 
 void loop() {
-  // Check for button press
-  if (buttonPressed()) {
-    switch (stopwatchState) {
-      case STOPPED:
-        // Start the stopwatch
+  byte event = checkButton();
+
+  switch (stopwatchState) {
+    case STOPPED:
+      if (event == 2) { // Start on release
         startTime = millis();
         totalPausedTime = 0;
         stopwatchState = RUNNING;
         Serial.println("Stopwatch STARTED");
-        break;
-        
-      case RUNNING:
-        // Pause the stopwatch
-        pausedTime = millis();
-        stopwatchState = PAUSED;
+      }
+      break;
+
+    case RUNNING:
+      if (event == 1) { // Stop on press
+        stopwatchState = PAUSED_IDLE; // Go to idle state to wait for release
         Serial.println("Stopwatch PAUSED");
+      }
+      break;
+
+    case PAUSED_IDLE:
+        // Wait for button release to avoid multiple triggers
+        if (event == 2) {
+            stopwatchState = PAUSED;
+        }
         break;
-        
-      case PAUSED:
-        // Reset the stopwatch
-        stopwatchState = STOPPED;
+
+    case PAUSED:
+      if (event == 1) { // Reset on the next press
         clearDisplay();
-        Serial.println("Stopwatch RESET - Display cleared");
-        delay(500);  // Brief pause
-        break;
-    }
+        stopwatchState = RESET_IDLE; // Wait for release
+        Serial.println("Stopwatch RESET");
+      }
+      break;
+    
+    case RESET_IDLE:
+      if (event == 2) { // On release, go to STOPPED state
+        stopwatchState = STOPPED; // Ready for a clean start
+      }
+      break;
   }
-  
+
   // Update display if running
   if (stopwatchState == RUNNING) {
     static unsigned long lastUpdate = 0;
@@ -347,8 +359,4 @@ void loop() {
     }
   }
   
-  // If paused, calculate total paused time when resuming
-  if (stopwatchState == PAUSED) {
-    totalPausedTime = millis() - pausedTime;
-  }
 }
