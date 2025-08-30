@@ -9,6 +9,11 @@
 #define DATA_PIN  16
 #define BUTTON_PIN 33  // GPIO32 for start/stop/reset button
 
+// LED pin definitions for RGB LED
+#define LED_RED_PIN   19
+#define LED_GREEN_PIN 23
+#define LED_BLUE_PIN  18
+
 MD_MAX72XX mx = MD_MAX72XX(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 
 // Stopwatch variables
@@ -197,6 +202,17 @@ void clearDisplay() {
   mx.clear();
 }
 
+// Function to set LED color
+// For white: red=255, green=255, blue=255
+// For off: red=0, green=0, blue=0
+void setLEDColor(int red, int green, int blue) {
+  // Common anode LED - invert values (0 = full brightness, 255 = off)
+  // If using common cathode LED, remove the inversion
+  analogWrite(LED_RED_PIN, 255 - red);
+  analogWrite(LED_GREEN_PIN, 255 - green);
+  analogWrite(LED_BLUE_PIN, 255 - blue);
+}
+
 // Function to display "00.00"
 void displayZeros() {
   displayDigit(0, 0);  // Tens of seconds
@@ -285,6 +301,16 @@ void setup() {
   // Initialize button pin
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   
+  // Initialize LED pins
+  pinMode(LED_RED_PIN, OUTPUT);
+  pinMode(LED_GREEN_PIN, OUTPUT);
+  pinMode(LED_BLUE_PIN, OUTPUT);
+  
+  // Turn off LED initially
+  digitalWrite(LED_RED_PIN, LOW);
+  digitalWrite(LED_GREEN_PIN, LOW);
+  digitalWrite(LED_BLUE_PIN, LOW);
+  
   // Initialize the display
   if (!mx.begin()) {
     Serial.println("ERROR: MAX7219 initialization failed!");
@@ -296,7 +322,7 @@ void setup() {
   Serial.println("SUCCESS: MAX7219 initialized.");
   
   // Configure display settings
-  mx.control(MD_MAX72XX::INTENSITY, 15);   // Maximum brightness
+  mx.control(MD_MAX72XX::INTENSITY, 15);   // Maximum brightness is 15
   mx.control(MD_MAX72XX::SHUTDOWN, false); // Turn on display
   clearDisplay();                          // Clear all panels
   
@@ -313,7 +339,14 @@ void loop() {
 
   switch (stopwatchState) {
     case STOPPED:
-      if (event == 2) { // Start on release
+      // Turn off white LED when button is pressed
+      if (event == 1) { // Button pressed
+        setLEDColor(0, 0, 0); // Turn off LED
+      }
+      
+      // Turn on LED and start stopwatch when button is released
+      if (event == 2) { // Button released
+        setLEDColor(255, 255, 255); // Turn on LED
         startTime = millis();
         totalPausedTime = 0;
         stopwatchState = RUNNING;
@@ -322,6 +355,9 @@ void loop() {
       break;
 
     case RUNNING:
+      // Ensure LED is on while running
+      setLEDColor(255, 255, 255);
+      
       if (event == 1) { // Stop on press
         stopwatchState = PAUSED_IDLE; // Go to idle state to wait for release
         Serial.println("Stopwatch PAUSED");
@@ -329,13 +365,19 @@ void loop() {
       break;
 
     case PAUSED_IDLE:
-        // Wait for button release to avoid multiple triggers
-        if (event == 2) {
-            stopwatchState = PAUSED;
-        }
-        break;
+      // Ensure LED is on while paused
+      setLEDColor(255, 255, 255);
+      
+      // Wait for button release to avoid multiple triggers
+      if (event == 2) {
+        stopwatchState = PAUSED;
+      }
+      break;
 
     case PAUSED:
+      // Ensure LED is on while paused
+      setLEDColor(255, 255, 255);
+      
       if (event == 1) { // Reset on the next press
         clearDisplay();
         stopwatchState = RESET_IDLE; // Wait for release
@@ -344,6 +386,9 @@ void loop() {
       break;
     
     case RESET_IDLE:
+      // Ensure LED is on while reset
+      setLEDColor(255, 255, 255);
+      
       if (event == 2) { // On release, go to STOPPED state
         stopwatchState = STOPPED; // Ready for a clean start
       }
